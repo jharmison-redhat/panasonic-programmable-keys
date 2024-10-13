@@ -1,0 +1,43 @@
+[project]
+name = "panasonic-programmable-keys"
+dynamic = ["version"]
+requires-python = ">=3.11"
+authors = [{ name = "James Harmison", email = "jharmison@redhat.com" }]
+description = """\
+A GUI applicaiton to define the programmable keys for Panasonic Toughbook keyboards\
+"""
+license = { file = "LICENSE" }
+classifiers = [
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+  "dynaconf >=3.2.6,<3.3.0",
+  "pydantic >=2.9.2,<2.10.0",
+  "typer >=0.12.5,<0.13",
+]
+
+[project.urls]
+Source = "https://github.com/jharmison-redhat/panasonic-programmable-keys"
+Documentation = "https://github.com/jharmison-redhat/panasonic-programmable-keys"
+
+[tool.setuptools_scm]
+write_to = "src/panasonic_programmable_keys/_version.py"
+
+[build-system]
+requires = ["setuptools", "wheel", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+skip-string-normalization = false
+line-length = 120
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+force_single_line = true
+line_length = 120
+src_paths = ["src", "tests"]
+
+[tool.pytest.ini_options]
+log_cli = true
