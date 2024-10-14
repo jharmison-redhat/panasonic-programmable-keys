@@ -1,8 +1,11 @@
 from rich import print
 
-from .base import Cli, VerboseOption, VersionOption, version_callback
 from ..util import make_logger
 from ..util import settings
+from .base import Cli
+from .base import VerboseOption
+from .base import VersionOption
+from .base import version_callback
 
 
 class Config(Cli):
