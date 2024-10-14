@@ -21,8 +21,14 @@ dependencies = [
 Source = "https://github.com/jharmison-redhat/panasonic-programmable-keys"
 Documentation = "https://github.com/jharmison-redhat/panasonic-programmable-keys"
 
+[project.scripts]
+panasonic-programmable-keys = "panasonic_programmable_keys:run"
+
+[tool.setuptools.package-data]
+panasonic_programmable_keys = ["defaults.toml"]
+
 [tool.setuptools_scm]
-write_to = "src/panasonic_programmable_keys/_version.py"
+write_to = "src/panasonic_programmable_keys/__version__.py"
 
 [build-system]
 requires = ["setuptools", "wheel", "setuptools-scm"]
@@ -41,3 +47,7 @@ src_paths = ["src", "tests"]
 
 [tool.pytest.ini_options]
 log_cli = true
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"

@@ -1,10 +1,12 @@
 import os
+
 from dynaconf import Dynaconf
+from pathlib import Path
 
 settings = Dynaconf(
     envvar_prefix="PANASONIC_KEYS",
     core_loaders=["TOML"],
-    settings_files=['defaults.toml'],
+    settings_files=[Path(__file__).parent.joinpath('defaults.toml')],
     load_dotenv=True,
     includes=[
         "/etc/panasonic/config.toml",
@@ -12,4 +14,3 @@ settings = Dynaconf(
         os.path.join(os.getcwd(), "config.toml"),
     ]
 )
-

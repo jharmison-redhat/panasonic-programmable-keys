@@ -3,14 +3,9 @@ import os
 import re
 import typer
 
-from pathlib import Path
-from rich import print
 from typer.main import get_command_name
 from typing import Callable, List, Optional
 from typing_extensions import Annotated
-
-from .logging import make_logger
-from .config import settings
 
 
 def path_autocomplete(
@@ -52,10 +47,11 @@ def path_autocomplete(
     return completer
 
 
-VerboseOption = Annotated[int, typer.Option(
-    "--verbose", "-v", count=True,
-    help="Increase logging verbosity (repeat for more)",
-)]
+def version_callback(value: bool):
+    if value:
+        from ..__version__ import version
+        print(version)
+        raise typer.Exit()
 
 
 class Cli:
@@ -72,7 +68,7 @@ class Cli:
             "context_settings": {"help_option_names": ["-h", "--help"]},
             "no_args_is_help": True,
         }
-        if getattr(self, 'help') is not None:
+        if getattr(self, 'help', None) is not None:
             app_settings["help"] = self.help
 
         self.run = typer.Typer(**app_settings)
@@ -83,7 +79,7 @@ class Cli:
                 command_name = get_command_name(method.removeprefix("cmd_"))
                 self.run.command(name=command_name)(func)
 
-        if getattr(self, 'subcommands') is not None:
+        if getattr(self, 'subcommands', None) is not None:
             for subcommand in self.subcommands:
                 self.add_subcommand(subcommand)
 
@@ -91,18 +87,13 @@ class Cli:
         self.run.add_typer(other.run, name=other.name)
 
 
-class Config(Cli):
-    help = "This is the config subcommand"
-
-    def cmd_view(self, verbose: VerboseOption) -> None:
-        """View the current configuration"""
-        _ = make_logger(verbose)
-        print(settings)
-
-
-class Main(Cli):
-    help = "This is the main app"
-    subcommands = [Config()]
-
-
-cli = Main()
+VerboseOption = Annotated[int, typer.Option(
+    "--verbose", "-v", count=True,
+    help="Increase logging verbosity (repeat for more)",
+    default_factory=lambda: 0,
+)]
+VersionOption = Annotated[Optional[bool], typer.Option(
+    "--version", "-V", callback=version_callback,
+    help="Print the version and exit",
+    default_factory=lambda: None,
+)]
