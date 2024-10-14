@@ -69,6 +69,15 @@ class InputDevice(BaseModel):
     handlers: List[str] = []
     bitmaps: InputDeviceBitmaps
 
+    @property
+    def libinput_devices(self) -> List[Path]:
+        ret = []
+        for handler in self.handlers:
+            path = Path("/dev/input").joinpath(handler)
+            if path.exists():
+                ret.append(path)
+        return ret
+
 
 class InputDevices(BaseModel):
     devices: List[InputDevice] = []
