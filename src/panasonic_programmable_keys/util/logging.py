@@ -8,6 +8,8 @@ def make_logger(verbosity: int | None = None) -> logging.Logger:
     logger = logging.getLogger("panasonic-programmable-keys")
     logger.setLevel(logging.DEBUG)
 
+    stderr: logging.Handler
+
     if len(logger.handlers) == 0:
         _format = "{asctime} {name} [{levelname:^9s}]: {message}"
         formatter = logging.Formatter(_format, style="{")

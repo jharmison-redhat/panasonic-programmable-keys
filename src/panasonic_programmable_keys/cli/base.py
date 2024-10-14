@@ -42,7 +42,7 @@ def path_autocomplete(
             completions.append("-")
 
         if match_wildcard is not None:
-            completions = filter(lambda i: wildcard_match(i, match_wildcard), completions)
+            completions = list(filter(lambda i: wildcard_match(i, match_wildcard), completions))
 
         return [i for i in completions if i.startswith(incomplete)]
 
