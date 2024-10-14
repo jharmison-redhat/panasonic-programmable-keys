@@ -70,6 +70,7 @@ class Cli:
         app_settings = {
             "context_settings": {"help_option_names": ["-h", "--help"]},
             "no_args_is_help": True,
+            "pretty_exceptions_show_locals": False,
         }
         if getattr(self, "help", None) is not None:
             app_settings["help"] = self.help
