@@ -1,3 +1,4 @@
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -66,7 +67,7 @@ class InputDeviceHandler(BaseModel):
     name: str
 
     @computed_field  # type: ignore
-    @property
+    @cached_property
     def libinput_device(self) -> Path | None:
         if self.name not in NON_DEVICE_HANDLERS:
             path = Path("/dev/input").joinpath(self.name)
