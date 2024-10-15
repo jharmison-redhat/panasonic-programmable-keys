@@ -146,7 +146,7 @@ class InputDevices(BaseModel):
                         logger.debug(f"Identified device bitmap {bitmap}: {value}")
                     case _:
                         raise ValueError(f"Unable to parse input prefix {start} with value {line}")
-            logger.debug(f"Parsing InputDevice: {build}")
+            logger.debug(f"Validating InputDevice: {build}")
             return InputDevice(**build)
 
         this_chunk: List[str] = []

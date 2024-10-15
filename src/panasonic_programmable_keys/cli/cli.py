@@ -53,6 +53,18 @@ class Input(Cli):
                 raise AssertionError(f"{e}: Did you mean to pass --no-check-paths on the CLI or change the settings?")
             raise e
 
+    def cmd_read(
+        self,
+        _: VersionOption,
+        verbose: VerboseOption,
+    ) -> None:
+        """Read the bytes coming off of the device as a raw struct."""
+        make_logger(verbose)
+        from ..input import yield_from
+
+        for line in yield_from():
+            print(line)
+
 
 class Main(Cli):
     help = "Panasonic Programmable Keys Configuration Utility"
