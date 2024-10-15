@@ -37,10 +37,21 @@ class Input(Cli):
                 help="The path to a file with syntax similar to /proc/bus/input/devices",
             ),
         ] = Path("/proc/bus/input/devices"),
+        check_paths: Annotated[
+            bool | None,
+            typer.Option(help="Whether to check paths that should exist (like those under /sys or /dev/input)"),
+        ] = settings.input.get("check_paths", True),
     ) -> None:
         """Load the input device list"""
+        if check_paths is not None:
+            settings.input["check_paths"] = check_paths
         make_logger(verbose)
-        print(InputDevices.load(proc_input_file).model_dump())
+        try:
+            print(InputDevices.load(proc_input_file).model_dump())
+        except AssertionError as e:
+            if str(e).startswith("Path") and str(e).endswith("doesn't exist"):
+                raise AssertionError(f"{e}: Did you mean to pass --no-check-paths on the CLI or change the settings?")
+            raise e
 
 
 class Main(Cli):

@@ -9,6 +9,7 @@ from pydantic import ValidationInfo
 from pydantic import field_validator
 
 from ..util import logger
+from ..util import settings
 
 NON_DEVICE_HANDLERS = ["kbd", "sysrq", "leds", "rfkill"]
 
@@ -74,7 +75,10 @@ class InputDevice(BaseModel):
         ret = []
         for handler in self.handlers:
             path = Path("/dev/input").joinpath(handler)
-            if path.exists():
+            if settings.input.get("check_paths", True):
+                if path.exists():
+                    ret.append(path)
+            else:
                 ret.append(path)
         return ret
 
@@ -108,8 +112,9 @@ class InputDevices(BaseModel):
                         sys_parsed = line.split("=", 1)[-1]
                         build["sys"] = sys_parsed
                         path = Path(f"/sys{sys_parsed}")
-                        logger.debug(f"...checking path: {path}")
-                        assert path.exists()
+                        if settings.input.get("check_paths", True):
+                            logger.debug(f"...checking path: {path}")
+                            assert path.exists(), f"Path '{path}' doesn't exist"
                         logger.debug(f"Identified device /sys path: {sys_parsed}")
                     case "U":
                         if uniq := line.split("=", 1)[-1]:
@@ -120,8 +125,9 @@ class InputDevices(BaseModel):
                         for handler in build["handlers"]:
                             if handler not in NON_DEVICE_HANDLERS:
                                 path = Path("/dev/input").joinpath(handler)
-                                logger.debug(f"...checking path: {path}")
-                                assert path.exists()
+                                if settings.input.get("check_paths", True):
+                                    logger.debug(f"...checking path: {path}")
+                                    assert path.exists(), f"Path '{path}' doesn't exist"
                             logger.debug(f"Identified input event handler device: {handler}")
                     case "B":
                         build["bitmaps"] = build.get("bitmaps", {})

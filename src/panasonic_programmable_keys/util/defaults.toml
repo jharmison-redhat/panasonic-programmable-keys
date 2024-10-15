@@ -1,2 +1,4 @@
 [keyboard]
-detect_input = true
+
+[input]
+check_paths = true
