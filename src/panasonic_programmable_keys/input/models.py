@@ -6,6 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 from pydantic import ValidationInfo
+from pydantic import computed_field
 from pydantic import field_validator
 
 from ..util import logger
@@ -61,26 +62,37 @@ class InputDeviceBitmaps(BaseModel):
         return int_list
 
 
+class InputDeviceHandler(BaseModel):
+    name: str
+
+    @computed_field  # type: ignore
+    @property
+    def libinput_device(self) -> Path | None:
+        if self.name not in NON_DEVICE_HANDLERS:
+            path = Path("/dev/input").joinpath(self.name)
+            if settings.input.get("check_paths", True):
+                if path.exists():
+                    return path
+            else:
+                return path
+        return None
+
+
 class InputDevice(BaseModel):
     id: InputDeviceId
     name: str
     phys: str
     sys: str
     uniq: Optional[str] = None
-    handlers: List[str] = []
+    handlers: List[InputDeviceHandler] = []
     bitmaps: InputDeviceBitmaps
 
     @property
     def libinput_devices(self) -> List[Path]:
         ret = []
         for handler in self.handlers:
-            path = Path("/dev/input").joinpath(handler)
-            if settings.input.get("check_paths", True):
-                if path.exists():
-                    ret.append(path)
-            else:
-                ret.append(path)
-        return ret
+            ret.append(handler.libinput_device)
+        return [handler.libinput_device for handler in self.handlers if handler.libinput_device is not None]
 
 
 class InputDevices(BaseModel):
@@ -121,14 +133,10 @@ class InputDevices(BaseModel):
                             build["uniq"] = uniq
                             logger.debug(f"Identified device unique identifier: {uniq}")
                     case "H":
-                        build["handlers"] = line.split("=", 1)[-1].split()
-                        for handler in build["handlers"]:
-                            if handler not in NON_DEVICE_HANDLERS:
-                                path = Path("/dev/input").joinpath(handler)
-                                if settings.input.get("check_paths", True):
-                                    logger.debug(f"...checking path: {path}")
-                                    assert path.exists(), f"Path '{path}' doesn't exist"
+                        build["handlers"] = []
+                        for handler in line.split("=", 1)[-1].split():
                             logger.debug(f"Identified input event handler device: {handler}")
+                            build["handlers"].append({"name": handler})
                     case "B":
                         build["bitmaps"] = build.get("bitmaps", {})
                         bitmap, value = line.split("=", 1)
