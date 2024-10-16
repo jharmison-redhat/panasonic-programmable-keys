@@ -10,6 +10,7 @@ settings = Dynaconf(
     load_dotenv=True,
     includes=[
         "/etc/panasonic/config.toml",
+        # TODO: find a good way to prefer looking in /usr
         os.path.join(os.getenv("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "panasonic", "config.toml"),
         os.path.join(os.getcwd(), "config.toml"),
     ],
