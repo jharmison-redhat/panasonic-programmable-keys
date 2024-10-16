@@ -1,3 +1,4 @@
+from enum import Enum
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -160,3 +161,28 @@ class InputDevices(BaseModel):
         if this_chunk:
             ret.devices.append(process(this_chunk))
         return ret
+
+
+class KeyPressDescriptor(Enum):
+    KEY_MACRO1 = 0x290
+    KEY_MACRO2 = 0x291
+    KEY_MACRO3 = 0x292
+    KEY_MACRO4 = 0x293
+    KEY_MACRO5 = 0x294
+    KEY_MACRO6 = 0x295
+    KEY_MACRO7 = 0x296
+    KEY_MACRO8 = 0x297
+    KEY_MACRO9 = 0x298
+    KEY_MACRO10 = 0x299
+    KEY_MACRO11 = 0x29A
+    KEY_MACRO12 = 0x29B
+
+
+class KeyPressEventType(Enum):
+    release = 0
+    press = 1
+
+
+class KeyPressEvent(BaseModel):
+    descriptor: KeyPressDescriptor
+    type: KeyPressEventType

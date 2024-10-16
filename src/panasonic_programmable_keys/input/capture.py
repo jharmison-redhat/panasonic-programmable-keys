@@ -3,9 +3,12 @@ from pathlib import Path
 from typing import Any
 from typing import Iterator
 
+from pydantic import ValidationError
+
 from ..util import logger
 from ..util import settings
 from .models import InputDevices
+from .models import KeyPressEvent
 
 
 def panasonic_keyboard_device_path(devices: InputDevices | None = None) -> Path | None:
@@ -21,7 +24,7 @@ def panasonic_keyboard_device_path(devices: InputDevices | None = None) -> Path 
     return None
 
 
-def yield_from(device_path: Path | None = None) -> Iterator[Any]:
+def yield_from(device_path: Path | None = None) -> Iterator[KeyPressEvent]:
     # Force check paths to prevent reads on wrong device
     settings.input["check_paths"] = True
 
@@ -33,6 +36,10 @@ def yield_from(device_path: Path | None = None) -> Iterator[Any]:
                 data = f.read(24)
                 if not data:
                     break
-                yield struct.unpack("4IHHI", data)
+                _, _, _, _, _, descriptor, event = struct.unpack("4IHHI", data)
+                try:
+                    yield KeyPressEvent(descriptor=descriptor, type=event)
+                except ValidationError:
+                    continue
     else:
         raise RuntimeError("Unable to find Panasonic keyboard device event handler")
