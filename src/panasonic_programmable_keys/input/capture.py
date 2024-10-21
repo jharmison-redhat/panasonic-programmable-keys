@@ -19,7 +19,7 @@ def panasonic_keyboard_device(devices: InputDevices | None = None) -> InputDevic
         if device.phys == "panasonic/hkey0":
             logger.debug(f"Found Panasonic keyboard: {device.name}")
             return device
-    logger.warning(f"Unable to identify Panasonic keyboard in {list(map(lambda d: d.name, devices))}")
+    logger.warning(f"Unable to identify Panasonic keyboard in {list(map(lambda d: d.name, devices.devices))}")
     return None
 
 
