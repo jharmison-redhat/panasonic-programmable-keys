@@ -19,10 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "tox",
-    "PyQt5-stubs",
-]
+dev = ["tox", "PyQt5-stubs", "pytest"]
 
 [project.urls]
 Source = "https://github.com/jharmison-redhat/panasonic-programmable-keys"
