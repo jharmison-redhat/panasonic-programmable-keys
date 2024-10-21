@@ -8,7 +8,6 @@ from .helpers import Truthy
 skip_load = bool(Truthy(os.getenv("PANASONIC_KEYS_SKIP_LOAD_FILES", "false")))
 
 if skip_load:
-    print("skipped loading environment except explicit")
     settings = Dynaconf(
         envvar_prefix="PANASONIC_KEYS",
         core_loaders=["TOML"],
