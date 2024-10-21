@@ -74,5 +74,30 @@ class Main(Cli):
         """Print the version and exit"""
         version_callback(True)
 
+    def cmd_gui(
+        self,
+        verbose: VerboseOption,
+        proc_input_file: Annotated[
+            Path,
+            typer.Argument(
+                autocompletion=path_autocomplete(file_okay=True, dir_okay=False),
+                help="The path to a file with syntax similar to /proc/bus/input/devices",
+            ),
+        ] = Path("/proc/bus/input/devices"),
+        check_paths: Annotated[
+            bool | None,
+            typer.Option(help="Whether to check paths that should exist (like those under /sys or /dev/input)"),
+        ] = settings.input.get("check_paths", True),
+    ) -> None:
+        """Run the GUI application"""
+        make_logger(verbose)
+
+        if check_paths is not None:
+            settings.input["check_paths"] = check_paths
+
+        from ..gui import gui
+
+        gui(proc_input_file)
+
 
 cli = Main()

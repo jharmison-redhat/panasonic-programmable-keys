@@ -7,20 +7,29 @@ from pydantic import ValidationError
 
 from ..util import logger
 from ..util import settings
+from .models import InputDevice
 from .models import InputDevices
 from .models import KeyPressEvent
 
 
-def panasonic_keyboard_device_path(devices: InputDevices | None = None) -> Path | None:
+def panasonic_keyboard_device(devices: InputDevices | None = None) -> InputDevice | None:
     if devices is None:
         devices = InputDevices.load()
     for device in devices.devices:
         if device.phys == "panasonic/hkey0":
             logger.debug(f"Found Panasonic keyboard: {device.name}")
-            for handler in device.handlers:
-                if handler.name.startswith("event") and handler.libinput_device is not None:
-                    logger.debug(f"Found libinput event handler: {handler.libinput_device}")
-                    return handler.libinput_device
+            return device
+    logger.warning(f"Unable to identify Panasonic keyboard in {list(map(lambda d: d.name, devices))}")
+    return None
+
+
+def panasonic_keyboard_device_path(devices: InputDevices | None = None) -> Path | None:
+    device = panasonic_keyboard_device(devices)
+    if device is not None:
+        for handler in device.handlers:
+            if handler.name.startswith("event") and handler.libinput_device is not None:
+                logger.debug(f"Found libinput event handler: {handler.libinput_device}")
+                return handler.libinput_device
     return None
 
 

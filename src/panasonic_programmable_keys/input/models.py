@@ -101,7 +101,7 @@ class InputDevices(BaseModel):
     devices: List[InputDevice] = []
 
     @classmethod
-    def load(cls, source: Path = Path("/proc/bus/input/devices")) -> "InputDevices":
+    def load(cls, source: Path | None = None) -> "InputDevices":
         ret = cls()
 
         def process(chunk: List[str]) -> InputDevice:
@@ -149,6 +149,9 @@ class InputDevices(BaseModel):
                         raise ValueError(f"Unable to parse input prefix {start} with value {line}")
             logger.debug(f"Validating InputDevice: {build}")
             return InputDevice(**build)
+
+        if source is None:
+            source = Path("/proc/bus/input/devices")
 
         this_chunk: List[str] = []
         with open(source) as f:
