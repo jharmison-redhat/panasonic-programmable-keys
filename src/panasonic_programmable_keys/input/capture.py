@@ -44,7 +44,7 @@ def yield_from(device_path: Path | None = None) -> Iterator[KeyPressEvent]:
             while True:
                 data = f.read(24)
                 if not data:
-                    break
+                    raise StopIteration()
                 _, _, _, _, _, descriptor, event = struct.unpack("4IHHI", data)
                 try:
                     yield KeyPressEvent(descriptor=descriptor, type=event)
