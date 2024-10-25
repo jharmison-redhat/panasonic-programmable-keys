@@ -14,10 +14,7 @@ from PyQt5.QtCore import QtMsgType
 from PyQt5.QtCore import QtWarningMsg
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import qInstallMessageHandler
-from PyQt5.QtGui import QFont
-from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QAbstractButton
-from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtWidgets import QDialog
@@ -29,7 +26,6 @@ from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QLineEdit
-from PyQt5.QtWidgets import QMenu
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QStyleFactory
@@ -108,7 +104,7 @@ class PanasonicKeyboardWindow(QDialog):
         device_label = QLabel(self.tr("&Device:"))
         device_label.setBuddy(device_combo_box)
 
-        rescan_buttons = QPushButton("Re-scan Device Buttons")
+        rescan_buttons = QPushButton("Re-scan Device &Buttons")
         rescan_buttons.clicked.connect(self.popup_rescan_buttons)
 
         top_layout = QHBoxLayout()
@@ -136,6 +132,8 @@ class PanasonicKeyboardWindow(QDialog):
         self.setLayout(main_layout)
 
         self.create_macro_functions_box()
+
+        self.setAttribute(Qt.WA_AlwaysShowToolTips, True)
 
         self.setWindowTitle(self.tr("Panasonic Keyboard Selector"))
 
@@ -165,22 +163,17 @@ class PanasonicKeyboardWindow(QDialog):
         reload.clicked.connect(self.create_macro_functions_box)
         buttons.addWidget(reload)
 
+        divider = QLabel()
+        buttons.addWidget(divider)
+
+        save_as = QPushButton(self.tr("Save &As"))
+        save_as.setToolTip(self.save_location_note)
+        save_as.clicked.connect(self.save_as)
+        buttons.addWidget(save_as)
+
         save = QPushButton(self.tr("&Save"))
         save.setToolTip(self.save_location_note)
-
-        save_menu = QMenu()
-
-        save_pwd = QAction(self.tr("Save to &Working Directory"), self)
-        save_pwd.triggered.connect(self.save)
-        save_pwd.setShortcuts(QKeySequence.Save)
-        save_menu.addAction(save_pwd)
-
-        save_as = QAction(self.tr("Save &As"), self)
-        save_as.triggered.connect(self.save_as)
-        save_as.setShortcuts(QKeySequence.SaveAs)
-
-        save_menu.addAction(save_as)
-        save.setMenu(save_menu)
+        save.clicked.connect(self.save)
         buttons.addWidget(save)
 
         layout.addRow("", buttons)
@@ -247,16 +240,34 @@ class PanasonicKeyboardWindow(QDialog):
         QApplication.processEvents()
         popup.exec()
 
+    def popup_notify_no_load(self) -> None:
+        logger.info("Notifying user of no auto-reload")
+        popup = QMessageBox(parent=self)
+        popup.setIcon(QMessageBox.Information)
+        popup.setWindowTitle(self.tr("Not Reloading Settings"))
+        popup.setText(self.tr("Your save location is not in the automatic loading path"))
+        popup.setInformativeText(
+            self.tr(
+                "The window will not automatically reload from known settings locations so that you may choose to save in one of the default locations."
+            )
+        )
+        popup.setDetailedText(self.save_location_note)
+        popup.show()
+        QApplication.processEvents()
+        popup.exec()
+
     def save_as(self, _: bool) -> None:
         user_config_dir = user_config.parent
         user_config_dir.mkdir(parents=True, exist_ok=True)
         save_as = QFileDialog(parent=self)
         save_as.setDirectory(str(user_config_dir))
-        save_as.setStatusTip(self.save_location_note)
+        save_as.setToolTip(self.save_location_note)
         save_as.setNameFilter("Configuration Settings (*.toml)")
+        save_as.setDefaultSuffix(".toml")
         save_as.setFileMode(QFileDialog.AnyFile)
         save_as.setOption(QFileDialog.HideNameFilterDetails, True)
         save_as.setOption(QFileDialog.DontConfirmOverwrite, True)
+        save_as.setAcceptMode(QFileDialog.AcceptSave)
         selection = save_as.exec()
         logger.debug(f"User selected: {selection}")
         if selection:
@@ -279,6 +290,8 @@ class PanasonicKeyboardWindow(QDialog):
             if not warning.exec():
                 logger.warning("Not saving due to user choice")
                 return None
+
+        logger.debug(f"Creating file: {file}")
 
         prev = {"keyboard": settings.keyboard.to_dict()}
         layout: QFormLayout = self.macro_functions_box.layout()  # type: ignore
@@ -310,8 +323,11 @@ class PanasonicKeyboardWindow(QDialog):
         except Exception as e:
             self.popup_warn_failed_save(getattr(e, "message", str(e)))
 
-        # Load our new settings, in case they changed
-        settings.reload()
+        if file in settings.includes_for_dynaconf:
+            # Load our new settings, if we expect them to have changed
+            settings.reload()
+        else:
+            self.popup_notify_no_load()
 
 
 def gui(proc_input_file: Path | None) -> None:
