@@ -181,9 +181,9 @@ class PanasonicKeyboardWindow(QDialog):
         popup_layout.addWidget(button_box)
         popup.setLayout(popup_layout)
 
-        t = UpdateThread()
-        t.received.connect(button_reading.append)
-        t.start()
+        update_button_reading = UpdateThread()
+        update_button_reading.received.connect(button_reading.append)
+        update_button_reading.start()
 
         popup.show()
         QApplication.processEvents()
