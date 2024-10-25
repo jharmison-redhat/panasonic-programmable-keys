@@ -15,16 +15,16 @@ from .base import version_callback
 
 
 class Config(Cli):
-    help = "Operations on the configuration"
+    help = "Configure and view configuration information."
 
     def cmd_view(self, verbose: VerboseOption, _: VersionOption) -> None:
-        """View the current configuration, as loaded"""
+        """View the current configuration, as loaded by default."""
         make_logger(verbose)
         print(settings.as_dict())
 
 
 class Input(Cli):
-    help = "Operations on lower-level input devices"
+    help = "Operations on lower-level input devices."
 
     def cmd_validate(
         self,
@@ -42,7 +42,7 @@ class Input(Cli):
             typer.Option(help="Whether to check paths that should exist (like those under /sys or /dev/input)"),
         ] = settings.input.get("check_paths", True),
     ) -> None:
-        """Load the input device list"""
+        """Load and validate the input device list."""
         if check_paths is not None:
             settings.input["check_paths"] = check_paths
         make_logger(verbose)
@@ -58,7 +58,7 @@ class Input(Cli):
         _: VersionOption,
         verbose: VerboseOption,
     ) -> None:
-        """Read the bytes coming off of the device as a raw struct."""
+        """Read the bytes coming off of the device as a raw struct (mostly for debugging)."""
         make_logger(verbose)
         from ..input import yield_from
 
@@ -71,7 +71,7 @@ class Main(Cli):
     subcommands = [Config(), Input()]
 
     def cmd_version(self) -> None:
-        """Print the version and exit"""
+        """Print the version and exit."""
         version_callback(True)
 
     def cmd_gui(
@@ -89,7 +89,7 @@ class Main(Cli):
             typer.Option(help="Whether to check paths that should exist (like those under /sys or /dev/input)"),
         ] = settings.input.get("check_paths", True),
     ) -> None:
-        """Run the GUI application"""
+        """Run the GUI application for configuring the functions of your programmable buttons."""
         make_logger(verbose)
 
         if check_paths is not None:
