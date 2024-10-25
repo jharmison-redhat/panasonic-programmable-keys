@@ -1,7 +1,6 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Any
 
 from PyQt5.QtCore import QMessageLogContext
 from PyQt5.QtCore import Qt
