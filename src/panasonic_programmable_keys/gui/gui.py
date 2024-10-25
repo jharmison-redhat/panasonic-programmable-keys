@@ -275,8 +275,9 @@ class PanasonicKeyboardWindow(QDialog):
 
     def save(self, _: bool, file: Path | None = None) -> None:
         if file is None:
-            file = Path("config.toml")
+            file = Path("config.toml").absolute()
         if file.exists():
+            file = file.absolute()
             logger.warning(f"Path exists: {file}")
             warning = QDialog(parent=self)
             warning.setWindowTitle(f"Warning! Path exists: {file}")
@@ -327,6 +328,8 @@ class PanasonicKeyboardWindow(QDialog):
             # Load our new settings, if we expect them to have changed
             settings.reload()
         else:
+            logger.debug(f"User selected save location: {file}")
+            logger.debug(f"Known autoload locations: {settings.includes_for_dynaconf}")
             self.popup_notify_no_load()
 
 
