@@ -81,9 +81,11 @@ class UpdateThread(QThread):
         self.proc_input_file = proc_input_file
 
     def run(self):
+        start_index = 1
         for event in yield_from(self.proc_input_file):
             if event.type == KeyPressEventType.press:
-                self.received.emit(event.descriptor.name)
+                self.received.emit(f"P{start_index}: {event.descriptor.name}")
+                start_index += 1
 
 
 class PanasonicKeyboardWindow(QDialog):
@@ -174,6 +176,7 @@ class PanasonicKeyboardWindow(QDialog):
 
         button_reading = QTextEdit()
         button_reading.setReadOnly(True)
+        button_reading.setPlaceholderText(self.tr("Press programmable keys for the codes to appear here..."))
 
         popup_layout = QVBoxLayout()
         popup_layout.addWidget(QLabel(self.tr("Press and release your programmable keys, one at a time, in order")))
