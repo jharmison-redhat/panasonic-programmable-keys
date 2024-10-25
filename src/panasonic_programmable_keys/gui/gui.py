@@ -242,7 +242,7 @@ class PanasonicKeyboardWindow(QDialog):
             enabled_key = function_definition.property("key_name") or "KEY_UNDEFINED"
             if (
                 enabled_key in settings.keyboard.get("enabled_keys", [])
-                and getattr(function_definition, "text", None) is not None
+                and callable(getattr(function_definition, "text", None))
             ):
                 new_function = function_definition.text()  # type: ignore
                 if new_function == "":
