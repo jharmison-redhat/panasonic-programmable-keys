@@ -11,7 +11,7 @@ def make_logger(verbosity: int | None = None) -> logging.Logger:
     stderr: logging.Handler
 
     if len(logger.handlers) == 0:
-        _format = "{asctime} {name} [{levelname:^9s}]: {message}"
+        _format = "{asctime} {name} ({module}/{filename} L{lineno}) [{levelname:^9s}]: {message}"
         formatter = logging.Formatter(_format, style="{")
 
         stderr = logging.StreamHandler(stream=sys.stderr)

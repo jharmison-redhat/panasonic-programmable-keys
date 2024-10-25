@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
-from typing import Optional
 
 from pydantic import BaseModel
 from pydantic import ValidationInfo
@@ -41,17 +40,18 @@ class InputDeviceId(BaseModel):
 class InputDeviceBitmaps(BaseModel):
     prop: str | int
     ev: str | int
-    msc: Optional[int] = None
+    msc: int | None = None
     key: str | List[int] = []
-    led: Optional[int] = None
+    led: int | str | None = None
 
-    @field_validator("prop", "ev")
-    @staticmethod
-    def hex(value: str | int) -> int:
+    @field_validator("prop", "ev", "led")
+    @classmethod
+    def hex(cls, value: str | int | None) -> int | None:
         if isinstance(value, str):
             return int(value, 16)
-        else:
+        elif isinstance(value, int):
             return value
+        return value
 
     @field_validator("key")
     @classmethod
@@ -85,7 +85,7 @@ class InputDevice(BaseModel):
     name: str
     phys: str
     sys: str
-    uniq: Optional[str] = None
+    uniq: str | None = None
     handlers: List[InputDeviceHandler] = []
     bitmaps: InputDeviceBitmaps
 

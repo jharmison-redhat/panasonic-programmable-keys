@@ -1,4 +1,5 @@
 [keyboard]
+enabled_keys = []
 
 [input]
 check_paths = true

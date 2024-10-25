@@ -1,45 +1,45 @@
 import logging
 import sys
-from os import device_encoding
 from pathlib import Path
+from typing import Any
 
-from PyQt5.QtCore import QDateTime
 from PyQt5.QtCore import QMessageLogContext
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QtCriticalMsg
 from PyQt5.QtCore import QtDebugMsg
 from PyQt5.QtCore import QtFatalMsg
+from PyQt5.QtCore import QThread
 from PyQt5.QtCore import QtInfoMsg
 from PyQt5.QtCore import QtMsgType
 from PyQt5.QtCore import QtWarningMsg
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import qInstallMessageHandler
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtWidgets import QDateTimeEdit
-from PyQt5.QtWidgets import QDial
 from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialogButtonBox
+from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QGridLayout
 from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QMenu
 from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QRadioButton
-from PyQt5.QtWidgets import QScrollBar
-from PyQt5.QtWidgets import QSizePolicy
-from PyQt5.QtWidgets import QSlider
-from PyQt5.QtWidgets import QSpinBox
 from PyQt5.QtWidgets import QStyleFactory
-from PyQt5.QtWidgets import QTableWidget
-from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QTextEdit
 from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5.QtWidgets import QWidget
 
-from ..input import InputDevices
 from ..input import panasonic_keyboard_device
+from ..input import yield_from
+from ..input.models import InputDevices
+from ..input.models import KeyPressEventType
 from ..util import logger
+from ..util import settings
 
 
 def qt_log_handler(msg_type: QtMsgType, msg_context: QMessageLogContext, msg: str | None) -> None:
@@ -74,9 +74,24 @@ def qt_log_handler(msg_type: QtMsgType, msg_context: QMessageLogContext, msg: st
 qInstallMessageHandler(qt_log_handler)
 
 
+class UpdateThread(QThread):
+    received = pyqtSignal([str])
+
+    def __init__(self, *args, proc_input_file: Path | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proc_input_file = proc_input_file
+
+    def run(self):
+        for event in yield_from(self.proc_input_file):
+            if event.type == KeyPressEventType.press:
+                self.received.emit(event.descriptor.name)
+
+
 class PanasonicKeyboardWindow(QDialog):
     def __init__(self, parent=None, proc_input_file: Path | None = None):
         super(PanasonicKeyboardWindow, self).__init__(parent)
+
+        QApplication.setStyle(QStyleFactory.create("Fusion"))
 
         self.devices = InputDevices.load(proc_input_file)
         device_combo_box = QComboBox()
@@ -84,143 +99,164 @@ class PanasonicKeyboardWindow(QDialog):
         self.panasonic_device = panasonic_keyboard_device(self.devices)
         if self.panasonic_device is not None:
             device_combo_box.setCurrentText(self.panasonic_device.name)
-        device_label = QLabel("&Device:")
+        device_label = QLabel(self.tr("&Device:"))
         device_label.setBuddy(device_combo_box)
 
-        self.create_top_left_group_box()
-        self.create_top_right_group_box()
-        self.create_bottom_left_tab_widget()
-        self.create_bottom_right_group_box()
+        rescan_buttons = QPushButton("Re-scan Device Buttons")
+        rescan_buttons.clicked.connect(self.popup_rescan_buttons)
 
         top_layout = QHBoxLayout()
         top_layout.addWidget(device_label)
         top_layout.addWidget(device_combo_box)
+        top_layout.addWidget(rescan_buttons)
         top_layout.addStretch(1)
 
         main_layout = QGridLayout()
-        main_layout.addLayout(top_layout, 0, 0, 1, 2)
-        main_layout.addWidget(self.top_left_group_box, 1, 0)
-        main_layout.addWidget(self.top_right_group_box, 1, 1)
-        main_layout.addWidget(self.bottom_left_tab_widget, 2, 0)
-        main_layout.addWidget(self.bottom_right_group_box, 2, 1)
-        main_layout.setRowStretch(1, 1)
-        main_layout.setRowStretch(2, 1)
-        main_layout.setColumnStretch(0, 1)
-        main_layout.setColumnStretch(1, 1)
+        main_layout.addLayout(top_layout, 0, 0, 1, Qt.AlignRight)
+
         self.setLayout(main_layout)
 
-        self.change_style("Fusion")
+        self.create_macro_functions_box()
 
-        self.setWindowTitle("Panasonic Keyboard Selector")
+        self.setWindowTitle(self.tr("Panasonic Keyboard Selector"))
 
-    def change_style(self, style_name):
-        QApplication.setStyle(QStyleFactory.create(style_name))
+    def create_macro_functions_box(self):
+        window_layout: QGridLayout = self.layout()  # type: ignore
+        if getattr(self, "macro_functions_box", None) is not None:
+            window_layout.removeWidget(self.macro_functions_box)
+        self.macro_functions_box: QGroupBox = QGroupBox(self.tr("Macro Functions"))
 
-    def create_top_left_group_box(self):
-        self.top_left_group_box = QGroupBox("Group 1")
+        layout = QFormLayout()
 
-        radio_button1 = QRadioButton("Radio button 1")
-        radio_button2 = QRadioButton("Radio button 2")
-        radio_button3 = QRadioButton("Radio button 3")
-        radio_button1.setChecked(True)
+        for row, enabled_key in enumerate(settings.keyboard.get("enabled_keys", [])):
+            label = f"P{row + 1}"
+            configured_function = settings.keyboard.get(enabled_key, False) or ""
+            function_definition = QLineEdit(configured_function)
+            function_definition.setProperty("key_name", enabled_key)
+            function_definition.setClearButtonEnabled(True)
+            logger.debug(
+                f"Adding button for {label} targeting {enabled_key} preselected to '{function_definition.text()}'"
+            )
+            layout.addRow(label, function_definition)
 
-        check_box = QCheckBox("Tri-state check box")
-        check_box.setTristate(True)
-        check_box.setCheckState(Qt.CheckState.PartiallyChecked)
+        buttons = QHBoxLayout()
 
-        layout = QVBoxLayout()
-        layout.addWidget(radio_button1)
-        layout.addWidget(radio_button2)
-        layout.addWidget(radio_button3)
-        layout.addWidget(check_box)
-        layout.addStretch(1)
-        self.top_left_group_box.setLayout(layout)
+        reload = QPushButton(self.tr("&Reload"))
+        reload.clicked.connect(settings.reload)
+        reload.clicked.connect(self.create_macro_functions_box)
+        buttons.addWidget(reload)
 
-    def create_top_right_group_box(self):
-        self.top_right_group_box = QGroupBox("Group 2")
+        save = QPushButton(self.tr("&Save"))
+        save_menu = QMenu()
+        save_pwd = QAction(self.tr("Save to &Working Directory"), self)
+        save_pwd.triggered.connect(self.save)
+        save_pwd.setShortcuts(QKeySequence.Save)
+        save_menu.addAction(save_pwd)
+        save_as = QAction(self.tr("Save &As"), self)
+        save_as.triggered.connect(self.save_as)
+        save_as.setShortcuts(QKeySequence.SaveAs)
+        save_menu.addAction(save_as)
+        save.setMenu(save_menu)
+        buttons.addWidget(save)
 
-        default_push_button = QPushButton("Default Push Button")
-        default_push_button.setDefault(True)
+        layout.addRow("", buttons)
 
-        toggle_push_button = QPushButton("Toggle Push Button")
-        toggle_push_button.setCheckable(True)
-        toggle_push_button.setChecked(True)
+        self.macro_functions_box.setLayout(layout)
+        window_layout.addWidget(self.macro_functions_box, 1, 0)
 
-        flat_push_button = QPushButton("Flat Push Button")
-        flat_push_button.setFlat(True)
+    def popup_rescan_buttons(self):
+        logger.debug("Rescan buttons")
+        popup = QDialog(parent=self)
+        popup.setWindowTitle("Re-scan Device Buttons")
 
-        layout = QVBoxLayout()
-        layout.addWidget(default_push_button)
-        layout.addWidget(toggle_push_button)
-        layout.addWidget(flat_push_button)
-        layout.addStretch(1)
-        self.top_right_group_box.setLayout(layout)
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(popup.accept)
+        button_box.rejected.connect(popup.reject)
 
-    def create_bottom_left_tab_widget(self):
-        self.bottom_left_tab_widget = QTabWidget()
-        self.bottom_left_tab_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Ignored)
+        button_reading = QTextEdit()
+        button_reading.setReadOnly(True)
 
-        tab1 = QWidget()
-        table_widget = QTableWidget(10, 10)
+        popup_layout = QVBoxLayout()
+        popup_layout.addWidget(QLabel(self.tr("Press and release your programmable keys, one at a time, in order")))
+        popup_layout.addWidget(button_reading)
+        popup_layout.addWidget(button_box)
+        popup.setLayout(popup_layout)
 
-        tab1hbox = QHBoxLayout()
-        tab1hbox.setContentsMargins(5, 5, 5, 5)
-        tab1hbox.addWidget(table_widget)
-        tab1.setLayout(tab1hbox)
+        t = UpdateThread()
+        t.received.connect(button_reading.append)
+        t.start()
 
-        tab2 = QWidget()
-        text_edit = QTextEdit()
+        popup.show()
+        QApplication.processEvents()
 
-        text_edit.setPlainText(
-            "Twinkle, twinkle, little star,\n"
-            "How I wonder what you are.\n"
-            "Up above the world so high,\n"
-            "Like a diamond in the sky.\n"
-            "Twinkle, twinkle, little star,\n"
-            "How I wonder what you are!\n"
-        )
+        if not popup.exec():
+            logger.warning("Not updating scanned buttons due to user choice")
+            return None
 
-        tab2hbox = QHBoxLayout()
-        tab2hbox.setContentsMargins(5, 5, 5, 5)
-        tab2hbox.addWidget(text_edit)
-        tab2.setLayout(tab2hbox)
+        mapped_buttons = [b.strip() for b in button_reading.toPlainText().splitlines()]
+        logger.debug(mapped_buttons)
+        settings.keyboard["enabled_keys"] = mapped_buttons
+        self.create_macro_functions_box()
 
-        self.bottom_left_tab_widget.addTab(tab1, "&Table")
-        self.bottom_left_tab_widget.addTab(tab2, "Text &Edit")
+    def save_as(self, _: bool) -> None:
+        save_as = QFileDialog(parent=self)
+        save_as.setNameFilter("Configuration Settings (*.toml)")
+        save_as.setFileMode(QFileDialog.AnyFile)
+        save_as.setOption(QFileDialog.ReadOnly, True)
+        save_as.setOption(QFileDialog.HideNameFilterDetails, True)
+        save_as.setOption(QFileDialog.DontConfirmOverwrite, True)
+        selection = save_as.exec()
+        logger.debug(f"User selected: {selection}")
+        if selection:
+            self.save(True, Path(save_as.selectedFiles()[0]))
 
-    def create_bottom_right_group_box(self):
-        self.bottom_right_group_box = QGroupBox("Group 3")
-        self.bottom_right_group_box.setCheckable(True)
-        self.bottom_right_group_box.setChecked(True)
+    def save(self, _: bool, file: Path | None = None) -> None:
+        if file is None:
+            file = Path("config.toml")
+        if file.exists():
+            logger.warning(f"Path exists: {file}")
+            warning = QDialog(parent=self)
+            warning.setWindowTitle(f"Warning! Path exists: {file}")
+            button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+            button_box.accepted.connect(warning.accept)
+            button_box.rejected.connect(warning.reject)
+            warning_layout = QVBoxLayout()
+            warning_layout.addWidget(QLabel(self.tr("File exists, overwrite?")))
+            warning_layout.addWidget(button_box)
+            warning.setLayout(warning_layout)
+            if not warning.exec():
+                logger.warning("Not saving due to user choice")
+                return None
 
-        line_edit = QLineEdit("s3cRe7")
-        line_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        prev = {"keyboard": settings.keyboard.to_dict()}
+        layout: QFormLayout = self.macro_functions_box.layout()  # type: ignore
+        row_count = layout.rowCount() - 1  # One less to account for buttons
+        _label: QWidget
+        function_definition: QWidget
+        for _label, function_definition in (
+            (
+                layout.itemAt(i * 2).widget(),
+                layout.itemAt(i * 2 + 1).widget(),
+            )
+            for i in range(row_count)
+        ):
+            enabled_key = function_definition.property("key_name") or "KEY_UNDEFINED"
+            if (
+                enabled_key in settings.keyboard.get("enabled_keys", [])
+                and getattr(function_definition, "text", None) is not None
+            ):
+                new_function = function_definition.text()  # type: ignore
+                if new_function == "":
+                    logger.debug(f"Unsetting the defined function for {enabled_key}")
+                else:
+                    logger.debug(f"Updating {enabled_key} to use {new_function}")
+                prev["keyboard"][enabled_key] = new_function
 
-        spin_box = QSpinBox(self.bottom_right_group_box)
-        spin_box.setValue(50)
+        from dynaconf import loaders
 
-        date_time_edit = QDateTimeEdit(self.bottom_right_group_box)
-        date_time_edit.setDateTime(QDateTime.currentDateTime())
-
-        slider = QSlider(Qt.Orientation.Horizontal, self.bottom_right_group_box)
-        slider.setValue(40)
-
-        scroll_bar = QScrollBar(Qt.Orientation.Horizontal, self.bottom_right_group_box)
-        scroll_bar.setValue(60)
-
-        dial = QDial(self.bottom_right_group_box)
-        dial.setValue(30)
-        dial.setNotchesVisible(True)
-
-        layout = QGridLayout()
-        layout.addWidget(line_edit, 0, 0, 1, 2)
-        layout.addWidget(spin_box, 1, 0, 1, 2)
-        layout.addWidget(date_time_edit, 2, 0, 1, 2)
-        layout.addWidget(slider, 3, 0)
-        layout.addWidget(scroll_bar, 4, 0)
-        layout.addWidget(dial, 3, 1, 2, 1)
-        layout.setRowStretch(5, 1)
-        self.bottom_right_group_box.setLayout(layout)
+        loaders.write(str(file), prev)
+        # Load our new settings, in case they changed
+        settings.reload()
 
 
 def gui(proc_input_file: Path | None):
