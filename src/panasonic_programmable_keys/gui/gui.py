@@ -1,6 +1,7 @@
 import logging
 import sys
 from pathlib import Path
+from textwrap import dedent
 
 from PyQt5.QtCore import QMessageLogContext
 from PyQt5.QtCore import Qt
@@ -13,7 +14,9 @@ from PyQt5.QtCore import QtMsgType
 from PyQt5.QtCore import QtWarningMsg
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import qInstallMessageHandler
+from PyQt5.QtGui import QFont
 from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QAbstractButton
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QComboBox
@@ -27,6 +30,7 @@ from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QMenu
+from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QStyleFactory
 from PyQt5.QtWidgets import QTextEdit
@@ -38,7 +42,8 @@ from ..input import yield_from
 from ..input.models import InputDevices
 from ..input.models import KeyPressEventType
 from ..util import logger
-from ..util import settings
+from ..util.config import settings
+from ..util.config import user_config
 
 
 def qt_log_handler(msg_type: QtMsgType, msg_context: QMessageLogContext, msg: str | None) -> None:
@@ -76,11 +81,11 @@ qInstallMessageHandler(qt_log_handler)
 class UpdateThread(QThread):
     received = pyqtSignal([str])
 
-    def __init__(self, *args, proc_input_file: Path | None = None, **kwargs):
+    def __init__(self, *args, proc_input_file: Path | None = None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.proc_input_file = proc_input_file
 
-    def run(self):
+    def run(self) -> None:
         start_index = 1
         for event in yield_from(self.proc_input_file):
             if event.type == KeyPressEventType.press:
@@ -89,7 +94,7 @@ class UpdateThread(QThread):
 
 
 class PanasonicKeyboardWindow(QDialog):
-    def __init__(self, parent=None, proc_input_file: Path | None = None):
+    def __init__(self, parent=None, proc_input_file: Path | None = None) -> None:
         super(PanasonicKeyboardWindow, self).__init__(parent)
 
         QApplication.setStyle(QStyleFactory.create("Fusion"))
@@ -115,13 +120,26 @@ class PanasonicKeyboardWindow(QDialog):
         main_layout = QGridLayout()
         main_layout.addLayout(top_layout, 0, 0, 1, Qt.AlignRight)
 
+        self.save_location_note = (
+            self.tr(
+                dedent(
+                    """\
+            Note that the daemon, by default, looks in the following directories in order,
+            with later file entries overriding earlier entries:
+        """
+                )
+            )
+            + "\n"
+            + ",\n".join([str(p) for p in settings.includes_for_dynaconf])
+        )
+
         self.setLayout(main_layout)
 
         self.create_macro_functions_box()
 
         self.setWindowTitle(self.tr("Panasonic Keyboard Selector"))
 
-    def create_macro_functions_box(self):
+    def create_macro_functions_box(self) -> None:
         window_layout: QGridLayout = self.layout()  # type: ignore
         if getattr(self, "macro_functions_box", None) is not None:
             window_layout.removeWidget(self.macro_functions_box)
@@ -148,14 +166,19 @@ class PanasonicKeyboardWindow(QDialog):
         buttons.addWidget(reload)
 
         save = QPushButton(self.tr("&Save"))
+        save.setToolTip(self.save_location_note)
+
         save_menu = QMenu()
+
         save_pwd = QAction(self.tr("Save to &Working Directory"), self)
         save_pwd.triggered.connect(self.save)
         save_pwd.setShortcuts(QKeySequence.Save)
         save_menu.addAction(save_pwd)
+
         save_as = QAction(self.tr("Save &As"), self)
         save_as.triggered.connect(self.save_as)
         save_as.setShortcuts(QKeySequence.SaveAs)
+
         save_menu.addAction(save_as)
         save.setMenu(save_menu)
         buttons.addWidget(save)
@@ -165,8 +188,8 @@ class PanasonicKeyboardWindow(QDialog):
         self.macro_functions_box.setLayout(layout)
         window_layout.addWidget(self.macro_functions_box, 1, 0)
 
-    def popup_rescan_buttons(self):
-        logger.debug("Rescan buttons")
+    def popup_rescan_buttons(self) -> None:
+        logger.debug("Rescanning buttons")
         popup = QDialog(parent=self)
         popup.setWindowTitle("Re-scan Device Buttons")
 
@@ -200,11 +223,38 @@ class PanasonicKeyboardWindow(QDialog):
         settings.keyboard["enabled_keys"] = mapped_buttons
         self.create_macro_functions_box()
 
+    def popup_warn_failed_save(self, msg) -> None:
+        logger.warning("Unable to save file, displaying traceback")
+        popup = QMessageBox(parent=self)
+        popup.setIcon(QMessageBox.Critical)
+        popup.setWindowTitle(self.tr("Unable to Save File"))
+        popup.setText(self.tr("Unable to Save File."))
+        popup.setInformativeText(self.tr("For more details, see below."))
+        popup.setDetailedText(self.tr("Python error:") + "\n\n" + msg)
+
+        logger.debug("Window constructed")
+
+        # Expand detailed text by default
+        details_button: QAbstractButton | None = None
+        for button in popup.buttons():
+            if popup.buttonRole(button) == QMessageBox.ActionRole:
+                details_button = button
+                break
+        if details_button is not None:
+            details_button.click()
+
+        popup.show()
+        QApplication.processEvents()
+        popup.exec()
+
     def save_as(self, _: bool) -> None:
+        user_config_dir = user_config.parent
+        user_config_dir.mkdir(parents=True, exist_ok=True)
         save_as = QFileDialog(parent=self)
+        save_as.setDirectory(str(user_config_dir))
+        save_as.setStatusTip(self.save_location_note)
         save_as.setNameFilter("Configuration Settings (*.toml)")
         save_as.setFileMode(QFileDialog.AnyFile)
-        save_as.setOption(QFileDialog.ReadOnly, True)
         save_as.setOption(QFileDialog.HideNameFilterDetails, True)
         save_as.setOption(QFileDialog.DontConfirmOverwrite, True)
         selection = save_as.exec()
@@ -243,9 +293,8 @@ class PanasonicKeyboardWindow(QDialog):
             for i in range(row_count)
         ):
             enabled_key = function_definition.property("key_name") or "KEY_UNDEFINED"
-            if (
-                enabled_key in settings.keyboard.get("enabled_keys", [])
-                and callable(getattr(function_definition, "text", None))
+            if enabled_key in settings.keyboard.get("enabled_keys", []) and callable(
+                getattr(function_definition, "text", None)
             ):
                 new_function = function_definition.text()  # type: ignore
                 if new_function == "":
@@ -256,12 +305,16 @@ class PanasonicKeyboardWindow(QDialog):
 
         from dynaconf import loaders
 
-        loaders.write(str(file), prev)
+        try:
+            loaders.write(str(file), prev)
+        except Exception as e:
+            self.popup_warn_failed_save(getattr(e, "message", str(e)))
+
         # Load our new settings, in case they changed
         settings.reload()
 
 
-def gui(proc_input_file: Path | None):
+def gui(proc_input_file: Path | None) -> None:
     app = QApplication([])
     window = PanasonicKeyboardWindow(proc_input_file=proc_input_file)
     window.show()
