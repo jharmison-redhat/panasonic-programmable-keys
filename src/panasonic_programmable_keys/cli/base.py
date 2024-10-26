@@ -1,6 +1,7 @@
 import inspect
 import os
 import re
+from pathlib import Path
 from typing import Callable
 from typing import List
 from typing import Optional
@@ -8,6 +9,8 @@ from typing import Optional
 import typer
 from typer.main import get_command_name
 from typing_extensions import Annotated
+
+from ..util.config import settings
 
 
 def path_autocomplete(
@@ -42,7 +45,7 @@ def path_autocomplete(
             completions.append("-")
 
         if match_wildcard is not None:
-            completions = list(filter(lambda i: wildcard_match(i, match_wildcard), completions))
+            completions = list(filter(lambda i: wildcard_match(i, match_wildcard), completions))  # type: ignore
 
         return [i for i in completions if i.startswith(incomplete)]
 
@@ -99,6 +102,7 @@ VerboseOption = Annotated[
         count=True,
         help="Increase logging verbosity (repeat for more)",
         default_factory=lambda: 0,
+        show_default=False,
     ),
 ]
 VersionOption = Annotated[
@@ -109,5 +113,39 @@ VersionOption = Annotated[
         callback=version_callback,
         help="Print the version and exit",
         default_factory=lambda: None,
+        is_eager=True,
+        show_default=False,
+    ),
+]
+PortOption = Annotated[
+    int,
+    typer.Option(
+        "--port",
+        "-p",
+        help="The port to listen on or connect to",
+        min=1,
+        max=65535,
+        metavar="PORT",
+        rich_help_panel="Command Options",
+        default_factory=lambda: settings.rpc.get("port", 10018),
+        show_default=str(settings.rpc.get("port", 10018)),
+    ),
+]
+DevicesFileArgument = Annotated[
+    Path,
+    typer.Argument(
+        autocompletion=path_autocomplete(file_okay=True, dir_okay=False),
+        help="The path to a file with syntax similar to /proc/bus/input/devices",
+        default_factory=lambda: Path("/proc/bus/input/devices"),
+        show_default="/proc/bus/input/devices",
+    ),
+]
+CheckPathsOption = Annotated[
+    bool | None,
+    typer.Option(
+        help="Whether to check paths that should exist (like those under /sys or /dev/input)",
+        rich_help_panel="Command Options",
+        default_factory=lambda: settings.input.get("check_paths", True),
+        show_default="--check-paths",
     ),
 ]

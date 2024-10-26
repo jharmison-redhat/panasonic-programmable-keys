@@ -3,3 +3,6 @@ enabled_keys = []
 
 [input]
 check_paths = true
+
+[rpc]
+port = 10018

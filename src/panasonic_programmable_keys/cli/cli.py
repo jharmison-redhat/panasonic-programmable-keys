@@ -7,7 +7,10 @@ from typing_extensions import Annotated
 from ..input import InputDevices
 from ..util import make_logger
 from ..util import settings
+from .base import CheckPathsOption
 from .base import Cli
+from .base import DevicesFileArgument
+from .base import PortOption
 from .base import VerboseOption
 from .base import VersionOption
 from .base import path_autocomplete
@@ -30,24 +33,15 @@ class Input(Cli):
         self,
         _: VersionOption,
         verbose: VerboseOption,
-        proc_input_file: Annotated[
-            Path,
-            typer.Argument(
-                autocompletion=path_autocomplete(file_okay=True, dir_okay=False),
-                help="The path to a file with syntax similar to /proc/bus/input/devices",
-            ),
-        ] = Path("/proc/bus/input/devices"),
-        check_paths: Annotated[
-            bool | None,
-            typer.Option(help="Whether to check paths that should exist (like those under /sys or /dev/input)"),
-        ] = settings.input.get("check_paths", True),
+        devices_file: DevicesFileArgument,
+        check_paths: CheckPathsOption,
     ) -> None:
         """Load and validate the input device list."""
         if check_paths is not None:
             settings.input["check_paths"] = check_paths
         make_logger(verbose)
         try:
-            print(InputDevices.load(proc_input_file).model_dump())
+            print(InputDevices.load(devices_file).model_dump())
         except AssertionError as e:
             if str(e).startswith("Path") and str(e).endswith("doesn't exist"):
                 raise AssertionError(f"{e}: Did you mean to pass --no-check-paths on the CLI or change the settings?")
@@ -77,17 +71,8 @@ class Main(Cli):
     def cmd_gui(
         self,
         verbose: VerboseOption,
-        proc_input_file: Annotated[
-            Path,
-            typer.Argument(
-                autocompletion=path_autocomplete(file_okay=True, dir_okay=False),
-                help="The path to a file with syntax similar to /proc/bus/input/devices",
-            ),
-        ] = Path("/proc/bus/input/devices"),
-        check_paths: Annotated[
-            bool | None,
-            typer.Option(help="Whether to check paths that should exist (like those under /sys or /dev/input)"),
-        ] = settings.input.get("check_paths", True),
+        devices_file: DevicesFileArgument,
+        check_paths: CheckPathsOption,
     ) -> None:
         """Run the GUI application for configuring the functions of your programmable buttons."""
         make_logger(verbose)
@@ -97,7 +82,40 @@ class Main(Cli):
 
         from ..gui import gui
 
-        gui(proc_input_file)
+        gui(devices_file)
+
+    def cmd_server(
+        self,
+        _: VersionOption,
+        verbose: VerboseOption,
+        devices_file: DevicesFileArgument,
+        check_paths: CheckPathsOption,
+        port: PortOption,
+    ) -> None:
+        """Run the rootful server, reading bytes off of the input device and enabling local clients to read them from PORT."""
+        make_logger(2)  # Default to INFO logging for running the server
+        make_logger(verbose)
+        settings.rpc["port"] = port
+        if check_paths is not None:
+            settings.input["check_paths"] = check_paths
+
+        from ..rpc.server import KeyService
+
+        KeyService(device_path=devices_file).get_server().start()
+
+    def cmd_client(
+        self,
+        _: VersionOption,
+        verbose: VerboseOption,
+        port: PortOption,
+    ) -> None:
+        """Run the user-mode client, reading events from the rootful server at PORT."""
+        make_logger(verbose)
+        settings.rpc["port"] = port
+
+        from ..rpc.client import KeyClient
+        for key_event in KeyClient().yield_keys():
+            print(key_event)
 
 
 cli = Main()
