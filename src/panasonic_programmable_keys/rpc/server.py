@@ -31,4 +31,6 @@ class KeyService(rpyc.Service):
 
     def get_server(self) -> ThreadedServer:
         port = settings.rpc.get("port", 10018)
-        return ThreadedServer(self, hostname="127.0.0.1", port=port, logger=logger, protocol_config={"import_custom_exceptions": True})
+        return ThreadedServer(
+            self, hostname="127.0.0.1", port=port, logger=logger, protocol_config={"import_custom_exceptions": True}
+        )

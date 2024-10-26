@@ -1,8 +1,4 @@
-from pathlib import Path
-
-import typer
 from rich import print
-from typing_extensions import Annotated
 
 from ..input import InputDevices
 from ..util import make_logger
@@ -13,7 +9,6 @@ from .base import DevicesFileArgument
 from .base import PortOption
 from .base import VerboseOption
 from .base import VersionOption
-from .base import path_autocomplete
 from .base import version_callback
 
 
@@ -114,6 +109,7 @@ class Main(Cli):
         settings.rpc["port"] = port
 
         from ..rpc.client import KeyClient
+
         for key_event in KeyClient().yield_keys():
             print(key_event)
 

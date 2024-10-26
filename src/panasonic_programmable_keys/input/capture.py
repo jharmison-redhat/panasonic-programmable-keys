@@ -1,6 +1,5 @@
 import struct
 from pathlib import Path
-from typing import Any
 from typing import Iterator
 
 from pydantic import ValidationError

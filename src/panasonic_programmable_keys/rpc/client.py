@@ -1,6 +1,5 @@
 from ipaddress import IPv4Address
 from typing import Annotated
-from typing import Any
 from typing import Iterator
 
 import rpyc
@@ -9,10 +8,10 @@ from pydantic import BaseModel
 from pydantic import Strict
 from pydantic.networks import IPvAnyAddress
 
-from .server import KeyService
 from ..input.models import KeyPressEvent
 from ..util import logger
 from ..util import settings
+from .server import KeyService
 
 
 class KeyClient(BaseModel):
