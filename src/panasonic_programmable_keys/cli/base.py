@@ -117,20 +117,6 @@ VersionOption = Annotated[
         show_default=False,
     ),
 ]
-PortOption = Annotated[
-    int,
-    typer.Option(
-        "--port",
-        "-p",
-        help="The port to listen on or connect to",
-        min=1,
-        max=65535,
-        metavar="PORT",
-        rich_help_panel="Command Options",
-        default_factory=lambda: settings.rpc.get("port", 10018),
-        show_default=str(settings.rpc.get("port", 10018)),
-    ),
-]
 DevicesFileArgument = Annotated[
     Path,
     typer.Argument(

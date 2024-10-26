@@ -5,4 +5,4 @@ enabled_keys = []
 check_paths = true
 
 [rpc]
-port = 10018
+socket = "/run/panasonic/keys.sock"

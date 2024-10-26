@@ -6,7 +6,6 @@ from ..util import settings
 from .base import CheckPathsOption
 from .base import Cli
 from .base import DevicesFileArgument
-from .base import PortOption
 from .base import VerboseOption
 from .base import VersionOption
 from .base import version_callback
@@ -85,28 +84,24 @@ class Main(Cli):
         verbose: VerboseOption,
         devices_file: DevicesFileArgument,
         check_paths: CheckPathsOption,
-        port: PortOption,
     ) -> None:
-        """Run the rootful server, reading bytes off of the input device and enabling local clients to read them from PORT."""
+        """Run the rootful server, reading bytes off of the input device and forwarding them to a unix socket."""
         make_logger(2)  # Default to INFO logging for running the server
         make_logger(verbose)
-        settings.rpc["port"] = port
         if check_paths is not None:
             settings.input["check_paths"] = check_paths
 
-        from ..rpc.server import KeyService
+        from ..rpc.server import get_server
 
-        KeyService(device_path=devices_file).get_server().start()
+        get_server(device_path=devices_file).requestLoop()
 
     def cmd_client(
         self,
         _: VersionOption,
         verbose: VerboseOption,
-        port: PortOption,
     ) -> None:
-        """Run the user-mode client, reading events from the rootful server at PORT."""
+        """Run the user-mode client, reading events from the rootful server's unix socket."""
         make_logger(verbose)
-        settings.rpc["port"] = port
 
         from ..rpc.client import KeyClient
 

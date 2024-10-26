@@ -1,12 +1,7 @@
-from ipaddress import IPv4Address
-from typing import Annotated
+from pathlib import Path
 from typing import Iterator
 
-import rpyc
-from annotated_types import Interval
-from pydantic import BaseModel
-from pydantic import Strict
-from pydantic.networks import IPvAnyAddress
+import Pyro5.api
 
 from ..input.models import KeyPressEvent
 from ..util import logger
@@ -14,14 +9,12 @@ from ..util import settings
 from .server import KeyService
 
 
-class KeyClient(BaseModel):
-    address: IPvAnyAddress = IPv4Address("127.0.0.1")
-    port: Annotated[int, Strict(True), Interval(gt=0, lt=65536)] = settings.rpc.get("port", 10018)
-
-    def connect(self) -> KeyService:
-        logger.debug(f"Creating connection: {self.address}:{self.port}")
-        return rpyc.connect(str(self.address), self.port).root
+class KeyClient(object):
+    def __init__(self) -> None:
+        self.socket = Path(settings.rpc.get("socket", "/run/panasonic/keys.sock"))
 
     def yield_keys(self) -> Iterator[KeyPressEvent]:
         logger.debug("Receiving keys")
-        yield from self.connect().yield_keys()
+        server: KeyService = Pyro5.api.Proxy(f"PYRO:keyservice@./u:{self.socket}")  # type: ignore
+        for key_event in server.yield_keys():
+            yield KeyPressEvent(**key_event)

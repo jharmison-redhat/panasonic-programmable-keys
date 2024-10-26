@@ -39,10 +39,12 @@ def yield_from(device_path: Path | None = None) -> Iterator[KeyPressEvent]:
     if device_path is None:
         device_path = panasonic_keyboard_device_path()
     if device_path is not None:
+        logger.debug(f"Reading bytes from: {device_path}")
         with open(device_path, "rb") as f:
             while True:
                 data = f.read(24)
                 if not data:
+                    logger.debug("Ending byte read")
                     raise StopIteration()
                 _, _, _, _, _, descriptor, event = struct.unpack("4IHHI", data)
                 try:
