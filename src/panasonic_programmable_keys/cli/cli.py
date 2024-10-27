@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from rich import print
 
 from ..input import InputDevices
@@ -54,9 +57,30 @@ class Input(Cli):
             print(line)
 
 
+class Debug(Cli):
+    help = "Debugging tools, not intended for external consumption"
+    extra_app_settings = {"hidden": True}
+    subcommands = [Input()]
+
+    def cmd_server(self) -> None:
+        """Debug the server interface."""
+        make_logger(5)
+        settings.rpc["socket"] = Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")).joinpath("panasonic.sock")
+        from ..rpc.server import get_server
+        get_server().requestLoop()
+
+    def cmd_client(self) -> None:
+        """Debug the client interface."""
+        make_logger(5)
+        settings.rpc["socket"] = Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")).joinpath("panasonic.sock")
+        from ..rpc.client import KeyClient
+        client = KeyClient()
+        print(client.ping())
+
+
 class Main(Cli):
     help = "Panasonic Programmable Keys Configuration Utility"
-    subcommands = [Config(), Input()]
+    subcommands = [Config(), Debug()]
 
     def cmd_version(self) -> None:
         """Print the version and exit."""
