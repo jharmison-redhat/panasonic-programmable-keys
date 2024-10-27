@@ -268,6 +268,7 @@ class PanasonicKeyboardWindow(QDialog):
         save_as.setOption(QFileDialog.HideNameFilterDetails, True)
         save_as.setOption(QFileDialog.DontConfirmOverwrite, True)
         save_as.setAcceptMode(QFileDialog.AcceptSave)
+        save_as.selectFile("config.toml")
         selection = save_as.exec()
         logger.debug(f"User selected: {selection}")
         if selection:
