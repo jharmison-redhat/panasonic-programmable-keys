@@ -3,7 +3,6 @@ import os
 import sys
 from pathlib import Path
 from textwrap import dedent
-from time import process_time_ns
 
 from PyQt5.QtCore import QMessageLogContext
 from PyQt5.QtCore import Qt
@@ -128,7 +127,7 @@ class PanasonicKeyboardWindow(QDialog):
 
                 device_combo_box.setDisabled(True)
                 device_combo_box.setToolTip(self.tr("You lack permissions to read from the keyboard device file"))
-                if KeyClient().connectable():
+                if KeyClient().ping():
                     rescan_buttons.setToolTip(self.tr("Events will be streamed from the running RPC server"))
                     rescan_buttons.setDisabled(False)
                 else:

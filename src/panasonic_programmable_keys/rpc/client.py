@@ -13,10 +13,10 @@ class KeyClient(object):
     def __init__(self) -> None:
         self.socket = Path(settings.rpc.get("socket", "/run/panasonic/keys.sock"))
 
-    def connectable(self) -> bool:
-        with Pyro5.api.Proxy(f"PYRO:keyservice@./u:{self.socket}") as server:
+    def ping(self) -> bool:
+        with Pyro5.api.Proxy(f"PYRO:keyservice@./u:{self.socket}") as client:
             try:
-                server._pyroValidateHandshake(True)
+                client.echo(True)
             except Exception:
                 return False
         return True

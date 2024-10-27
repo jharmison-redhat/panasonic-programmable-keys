@@ -106,7 +106,7 @@ class Main(Cli):
         from ..rpc.client import KeyClient
 
         client = KeyClient()
-        if client.connectable():
+        if client.ping():
             for key_event in client.yield_keys():
                 print(key_event)
         else:

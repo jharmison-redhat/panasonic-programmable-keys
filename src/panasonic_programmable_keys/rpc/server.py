@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Any
 from typing import Iterator
 
 import Pyro5.api
@@ -23,6 +24,10 @@ class KeyService(object):
         for key_event in yield_from(panasonic_keyboard_device_path(devices=devices)):
             logger.debug(key_event)
             yield key_event.model_dump()
+
+    def echo(self, data: Any) -> Any:
+        logger.debug(f"Received echo request: {data}")
+        return data
 
 
 def get_server(device_path: Path | None = None) -> Pyro5.api.Daemon:
