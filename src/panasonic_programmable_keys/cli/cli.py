@@ -153,7 +153,9 @@ class Main(Cli):
         self,
         _: VersionOption,
         verbose: VerboseOption,
-        install_to: Annotated[Path, typer.Argument(help="The root directory into which to install files", metavar="PATH")] = Path("/"),
+        install_to: Annotated[
+            Path, typer.Argument(help="The root directory into which to install files", metavar="PATH")
+        ] = Path("/"),
     ) -> None:
         """Install the SystemD system an user units and GUI application shortcut."""
         make_logger(verbose)
