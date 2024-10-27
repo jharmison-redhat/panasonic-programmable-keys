@@ -105,8 +105,14 @@ class Main(Cli):
 
         from ..rpc.client import KeyClient
 
-        for key_event in KeyClient().yield_keys():
-            print(key_event)
+        client = KeyClient()
+        if client.connectable():
+            for key_event in client.yield_keys():
+                print(key_event)
+        else:
+            raise RuntimeError(
+                f"Unable to connect to the server at {settings.rpc.get('socket', '/run/panasonic/keys.sock')} - is the server running?"
+            )
 
 
 cli = Main()

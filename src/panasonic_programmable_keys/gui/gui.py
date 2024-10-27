@@ -1,7 +1,9 @@
 import logging
+import os
 import sys
 from pathlib import Path
 from textwrap import dedent
+from time import process_time_ns
 
 from PyQt5.QtCore import QMessageLogContext
 from PyQt5.QtCore import Qt
@@ -83,7 +85,13 @@ class UpdateThread(QThread):
 
     def run(self) -> None:
         start_index = 1
-        for event in yield_from(self.proc_input_file):
+        try:
+            key_event_generator = yield_from(self.proc_input_file)
+        except PermissionError:
+            from ..rpc.client import KeyClient
+
+            key_event_generator = KeyClient().yield_keys()
+        for event in key_event_generator:
             if event.type == KeyPressEventType.press:
                 self.received.emit(f"P{start_index}: {event.descriptor.name}")
                 start_index += 1
@@ -99,13 +107,40 @@ class PanasonicKeyboardWindow(QDialog):
         device_combo_box = QComboBox()
         device_combo_box.addItems(map(lambda d: d.name, self.devices.devices))
         self.panasonic_device = panasonic_keyboard_device(self.devices)
-        if self.panasonic_device is not None:
-            device_combo_box.setCurrentText(self.panasonic_device.name)
         device_label = QLabel(self.tr("&Device:"))
         device_label.setBuddy(device_combo_box)
 
         rescan_buttons = QPushButton("Re-scan Device &Buttons")
         rescan_buttons.clicked.connect(self.popup_rescan_buttons)
+
+        rescan_buttons.setDisabled(True)
+
+        if self.panasonic_device is not None:
+            # We have a Panasonic keyboard
+            device_combo_box.setCurrentText(self.panasonic_device.name)
+
+            libinput_devices_readable = [
+                os.access(device, os.R_OK) for device in self.panasonic_device.libinput_devices
+            ]
+            if False in libinput_devices_readable:
+                # We can't read the device directly
+                from ..rpc.client import KeyClient
+
+                device_combo_box.setDisabled(True)
+                device_combo_box.setToolTip(self.tr("You lack permissions to read from the keyboard device file"))
+                if KeyClient().connectable():
+                    rescan_buttons.setToolTip(self.tr("Events will be streamed from the running RPC server"))
+                    rescan_buttons.setDisabled(False)
+                else:
+                    rescan_buttons.setToolTip(self.tr("You lack permissions to read from the keyboard device file"))
+            elif len(libinput_devices_readable) == 0:
+                # There are no libinput devices
+                device_combo_box.setDisabled(True)
+                device_combo_box.setToolTip(self.tr("Your keyboard is not exposing the device correctly"))
+                rescan_buttons.setToolTip(self.tr("Your keyboard is not exposing the device correctly"))
+            else:
+                # We found a libinput device and can write to it
+                rescan_buttons.setDisabled(False)
 
         top_layout = QHBoxLayout()
         top_layout.addWidget(device_label)
