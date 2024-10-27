@@ -67,6 +67,7 @@ class Debug(Cli):
         make_logger(5)
         settings.rpc["socket"] = Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")).joinpath("panasonic.sock")
         from ..rpc.server import get_server
+
         get_server().requestLoop()
 
     def cmd_client(self) -> None:
@@ -74,6 +75,7 @@ class Debug(Cli):
         make_logger(5)
         settings.rpc["socket"] = Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")).joinpath("panasonic.sock")
         from ..rpc.client import KeyClient
+
         client = KeyClient()
         print(client.ping())
 
