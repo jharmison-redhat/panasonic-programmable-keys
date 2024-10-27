@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Iterator
 
@@ -31,6 +32,7 @@ def get_server(device_path: Path | None = None) -> Pyro5.api.Daemon:
     socket.parent.mkdir(exist_ok=True)
 
     server = Pyro5.api.Daemon(unixsocket=str(socket))
+    os.chmod(socket, 0o777)  # ensure that the socket can be read by everyone
     uri = server.register(KeyService(device_path=device_path), objectId="keyservice")
     logger.debug(f"Listening at: {uri}")
     return server
