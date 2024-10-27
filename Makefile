@@ -5,6 +5,9 @@ all: dev
 	python3.11 -m venv .venv
 	.venv/bin/pip install --upgrade pip
 
+.venv/bin/twine: .venv/bin/pip
+	.venv/bin/pip install twine
+
 .venv/lib/python3.11/site-packages/build/__main__.py: .venv/bin/pip
 	.venv/bin/pip install setuptools wheel build
 
@@ -27,3 +30,7 @@ test: .venv/bin/tox
 .PHONY: build
 build: format lint test
 	.venv/bin/tox -e build
+
+.PHONY: publish
+publish: .venv/bin/twine $(wildcard dist/*.whl)
+	.venv/bin/twine upload dist/*
