@@ -2,6 +2,7 @@ import inspect
 import os
 import re
 from pathlib import Path
+from typing import Any
 from typing import Callable
 from typing import List
 from typing import Optional
@@ -63,6 +64,7 @@ def version_callback(value: bool):
 class Cli:
     help: str
     subcommands: List["Cli"]
+    extra_app_settings: dict[str, Any]
 
     def __init__(self, name: str = "") -> None:
         if name:
@@ -78,20 +80,28 @@ class Cli:
         if getattr(self, "help", None) is not None:
             app_settings["help"] = self.help
 
+        if getattr(self, "extra_app_settings", {}):
+            app_settings.update(self.extra_app_settings)
+
         self.run = typer.Typer(**app_settings)
 
         for method, func in inspect.getmembers(self, predicate=inspect.ismethod):
             # Put commands into the typer app
             if method.startswith("cmd_"):
-                command_name = get_command_name(method.removeprefix("cmd_"))
-                self.run.command(name=command_name)(func)
+                cmd_args: dict = {}
+                if method.startswith("cmd_hidden_"):
+                    command_name = get_command_name(method.removeprefix("cmd_hidden_"))
+                    cmd_args["hidden"] = True
+                else:
+                    command_name = get_command_name(method.removeprefix("cmd_"))
+                self.run.command(name=command_name, **cmd_args)(func)
 
         if getattr(self, "subcommands", None) is not None:
             for subcommand in self.subcommands:
                 self.add_subcommand(subcommand)
 
     def add_subcommand(self, other: "Cli") -> None:
-        self.run.add_typer(other.run, name=other.name)
+        self.run.add_typer(other.run, name=other.name, rich_help_panel="Sub-Commands")
 
 
 VerboseOption = Annotated[
