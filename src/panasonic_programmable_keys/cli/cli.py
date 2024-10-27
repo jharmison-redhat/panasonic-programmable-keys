@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
 
+import typer
 from rich import print
+from typing_extensions import Annotated
 
 from ..input import InputDevices
 from ..util import make_logger
@@ -79,6 +81,13 @@ class Debug(Cli):
         client = KeyClient()
         print(client.ping())
 
+    def cmd_args(self) -> None:
+        """Print sysv args for help with finding the path."""
+        make_logger(5)
+        import sys
+
+        print(sys.argv)
+
 
 class Main(Cli):
     help = "Panasonic Programmable Keys Configuration Utility"
@@ -139,6 +148,18 @@ class Main(Cli):
             raise RuntimeError(
                 f"Unable to connect to the server at {settings.rpc.get('socket', '/run/panasonic/keys.sock')} - is the server running?"
             )
+
+    def cmd_hidden_install(
+        self,
+        _: VersionOption,
+        verbose: VerboseOption,
+        install_to: Annotated[Path, typer.Argument(help="The root directory into which to install files", metavar="PATH")] = Path("/"),
+    ) -> None:
+        """Install the SystemD system an user units and GUI application shortcut."""
+        make_logger(verbose)
+        from ..install import install
+
+        print(install(root=install_to))
 
 
 cli = Main()

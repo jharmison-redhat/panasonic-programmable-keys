@@ -1,0 +1,8 @@
+[Unit]
+Description=Start the Panasonic Keys system service, reading events off of the libinput device and sending them to the shared socket
+
+[Service]
+ExecStart={{ ppk_full_path }} server
+
+[Install]
+WantedBy=multi-user.target

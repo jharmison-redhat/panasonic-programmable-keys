@@ -1,0 +1,8 @@
+[Unit]
+Description=Start the Panasonic Keys user service, reading events off of the server
+
+[Service]
+ExecStart={{ ppk_full_path }} client
+
+[Install]
+WantedBy=basic.target
