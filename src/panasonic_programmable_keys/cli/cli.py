@@ -122,6 +122,7 @@ class Main(Cli):
     ) -> None:
         """Run the rootful server, reading bytes off of the input device and forwarding them to a unix socket."""
         make_logger(2)  # Default to INFO logging for running the server
+        verbose = verbose + 2
         make_logger(verbose)
         if check_paths is not None:
             settings.input["check_paths"] = check_paths
@@ -136,18 +137,13 @@ class Main(Cli):
         verbose: VerboseOption,
     ) -> None:
         """Run the user-mode client, reading events from the rootful server's unix socket."""
+        make_logger(2)  # Default to INFO logging for running the client
+        verbose = verbose + 2
         make_logger(verbose)
 
-        from ..rpc.client import KeyClient
+        from ..input.handle import handle_keys
 
-        client = KeyClient()
-        if client.ping():
-            for key_event in client.yield_keys():
-                print(key_event)
-        else:
-            raise RuntimeError(
-                f"Unable to connect to the server at {settings.rpc.get('socket', '/run/panasonic/keys.sock')} - is the server running?"
-            )
+        handle_keys()
 
     def cmd_hidden_install(
         self,

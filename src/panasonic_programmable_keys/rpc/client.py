@@ -10,7 +10,6 @@ from ..util import settings
 from .server import KeyService
 
 
-
 class KeyServerProxy(Pyro5.api.Proxy):
     def _pyroValidateHandshake(self, response: Any = True) -> None:
         logger.debug(f"Sending server handshake: {response}")
