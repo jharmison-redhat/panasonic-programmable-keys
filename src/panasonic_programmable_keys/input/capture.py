@@ -16,7 +16,7 @@ def panasonic_keyboard_device(devices: InputDevices | None = None) -> InputDevic
         devices = InputDevices.load()
     for device in devices.devices:
         if device.phys == "panasonic/hkey0":
-            logger.debug(f"Found Panasonic keyboard: {device.name}")
+            logger.info(f"Found Panasonic keyboard: {device.name}")
             return device
     logger.warning(f"Unable to identify Panasonic keyboard in {list(map(lambda d: d.name, devices.devices))}")
     return None
@@ -27,7 +27,7 @@ def panasonic_keyboard_device_path(devices: InputDevices | None = None) -> Path 
     if device is not None:
         for handler in device.handlers:
             if handler.name.startswith("event") and handler.libinput_device is not None:
-                logger.debug(f"Found libinput event handler: {handler.libinput_device}")
+                logger.info(f"Found libinput event handler: {handler.libinput_device}")
                 return handler.libinput_device
     return None
 

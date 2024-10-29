@@ -127,7 +127,7 @@ class InputDevices(BaseModel):
                         build["sys"] = sys_parsed
                         path = Path(f"/sys{sys_parsed}")
                         if settings.input.get("check_paths", True):
-                            logger.info(f"Checking path: {path}")
+                            logger.debug(f"Checking path: {path}")
                             assert path.exists(), f"Path '{path}' doesn't exist"
                         logger.debug(f"Identified device /sys path: {sys_parsed}")
                     case "U":
