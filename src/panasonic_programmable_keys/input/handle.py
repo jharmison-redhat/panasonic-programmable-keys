@@ -25,9 +25,12 @@ def handle_keys():
                     key_name = key_event.descriptor.name
                     if key_name in handled_keys:
                         desired_command = settings.keyboard.get(key_name, "")
-                        logger.info(f"Executing: {desired_command}")
-                        output = shell(desired_command, fail=False)
-                        futures.append(thread_pool.submit(logger.info, output))
+                        if desired_command != "":
+                            logger.info(f"Executing: {desired_command}")
+                            output = shell(desired_command, fail=False)
+                            futures.append(thread_pool.submit(logger.info, output))
+                        else:
+                            logger.debug(f"Skipping handling {key_event} as command not specified")
                     else:
                         logger.warning(f"Unhandled key received ({key_name}) - did you mean to configure it?")
                 else:
