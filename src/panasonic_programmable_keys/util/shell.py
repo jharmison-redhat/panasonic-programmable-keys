@@ -32,7 +32,7 @@ def shell(
     cmd: str = "",
     fail: bool = True,
     stderr: int | None = subprocess.STDOUT,
-    env: Dict[str, str] = merge(os.environ.copy(), vars),
+    env: Dict[str, str] = os.environ.copy(),
 ) -> Iterable[str]:
     """Run a command in a subprocess, yielding lines of output from it.
     By default will throw an Exception depending on  the return code of the
@@ -64,7 +64,7 @@ def shellw(
     cmd: str = "",
     fail: bool = True,
     stderr: int | None = subprocess.STDOUT,
-    env: Dict[str, str] = merge(os.environ.copy(), vars),
+    env: Dict[str, str] = os.environ.copy(),
 ) -> str:
     """Run a command in a subprocess, wait for it to finish, return all
     lines from it as a single string."""
