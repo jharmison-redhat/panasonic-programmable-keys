@@ -6,6 +6,7 @@ from rich import print
 from typing_extensions import Annotated
 
 from ..input import InputDevices
+from ..util import SettingsHotReloader
 from ..util import make_logger
 from ..util import settings
 from .base import CheckPathsOption
@@ -129,7 +130,8 @@ class Main(Cli):
 
         from ..rpc.server import get_server
 
-        get_server(device_path=devices_file).requestLoop()
+        with SettingsHotReloader():
+            get_server(device_path=devices_file).requestLoop()
 
     def cmd_client(
         self,
@@ -143,7 +145,8 @@ class Main(Cli):
 
         from ..input.handle import handle_keys
 
-        handle_keys()
+        with SettingsHotReloader():
+            handle_keys()
 
     def cmd_hidden_install(
         self,
