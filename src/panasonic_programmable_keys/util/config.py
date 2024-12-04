@@ -46,10 +46,14 @@ class SettingsHotReloader:
     def __init__(self) -> None:
         self.event_handler = self.SettingsEventHandler()
         self.observer = InotifyObserver()
+        self.observed = []
         for config in include_configs:
-            self.observer.schedule(self.event_handler, str(config))
+            if config.exists():
+                self.observed.append(config)
+                self.observer.schedule(self.event_handler, str(config))
 
     def __enter__(self) -> None:
+        logger.info(f"Watching {self.observed} for updates")
         self.observer.start()
 
     def __exit__(self, *_) -> None:
