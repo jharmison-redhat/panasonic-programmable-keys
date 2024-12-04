@@ -30,7 +30,7 @@ def install(root: Path | None = None) -> tuple[Path, ...]:
 
     server_service_dest = root.joinpath(Path(f"etc/systemd/system/{server}"))
     client_service_dest = root.joinpath(Path(f"etc/systemd/user/{client}"))
-    application_file_dest = root.joinpath(Path(f"usr/local/share/applications/{application}"))
+    application_file_dest = root.joinpath(Path(f"usr/share/applications/{application}"))
 
     logger.debug("Ensuring directories exist...")
     server_service_dest.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +51,7 @@ def install(root: Path | None = None) -> tuple[Path, ...]:
     server_service_symlink.parent.mkdir(parents=True, exist_ok=True)
     logger.debug(f"Symlinking {server_service_symlink} to {server_service_dest}")
     server_service_symlink.symlink_to(server_service_dest)
-    client_service_symlink = root.joinpath(Path(f"etc/systemd/user/basic.target.wants/{client}"))
+    client_service_symlink = root.joinpath(Path(f"etc/systemd/user/graphical-session.target.wants/{client}"))
     client_service_symlink.parent.mkdir(parents=True, exist_ok=True)
     logger.debug(f"Symlinking {client_service_symlink} to {client_service_dest}")
     client_service_symlink.symlink_to(client_service_dest)
