@@ -2,6 +2,9 @@ import os
 from pathlib import Path
 
 from dynaconf import Dynaconf
+from watchdog.events import FileDeletedEvent
+from watchdog.events import FileModifiedEvent
+from watchdog.events import FileMovedEvent
 from watchdog.events import FileSystemEvent
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.inotify import InotifyObserver
@@ -39,9 +42,22 @@ else:
 
 class SettingsHotReloader:
     class SettingsEventHandler(FileSystemEventHandler):
+        @staticmethod
+        def _meaningful_event(event: FileSystemEvent) -> bool:
+            if isinstance(event, FileModifiedEvent):
+                return True
+            if isinstance(event, FileDeletedEvent):
+                return True
+            if isinstance(event, FileMovedEvent):
+                return True
+            return False
+
         def on_any_event(self, event: FileSystemEvent) -> None:
-            logger.debug(f"Reloading config due to {event}")
-            settings.reload()
+            if self._meaningful_event(event):
+                logger.debug(f"Reloading config due to {event}")
+                settings.reload()
+            else:
+                logger.debug(f"Recording unmeaningful envent: {event}")
 
     def __init__(self) -> None:
         self.event_handler = self.SettingsEventHandler()
